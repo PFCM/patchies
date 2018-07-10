@@ -1,0 +1,8 @@
+observations
+requests
+pybind11
+nmslib
+numpy
+click
+cv2
+scikit-image

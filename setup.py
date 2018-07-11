@@ -15,5 +15,5 @@ setup(
     install_requires=read_file('requirements.txt').split('\n'),
     entry_points='''
         [console_scripts]
-        patchies=patchies.pipeline:run
+        patchies=patchies.pipeline:cli
         ''')

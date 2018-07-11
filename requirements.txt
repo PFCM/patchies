@@ -4,5 +4,5 @@ pybind11
 nmslib
 numpy
 click
-cv2
+opencv-python
 scikit-image

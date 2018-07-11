@@ -1,6 +1,6 @@
 # patchies
 
-![cats](assets/screenshot.png)
+![jeff](assets/jeff.gif)![cat](assets/cat_jeff.gif)
 
 Replace patches of images with other images.
 

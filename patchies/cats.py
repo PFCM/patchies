@@ -89,7 +89,7 @@ def scan(func, initial):
         current = func(current)
 
 
-def process_cat(cat_path, face_pad=0.25, final_shape=(64, 64)):
+def process_cat(cat_path, face_pad=0.5, final_shape=(32, 32)):
     """process a single cat image into a final shape. Involves the following
     steps:
     - load the image

@@ -40,10 +40,10 @@ def _count_loader(gen):
     print()
 
 
-def cats(cats_path, outpath):
+def cats(cats_path, patch_size, outpath):
     """Get the kaggle cats dataset. Needs login, so you'll have to
     have previously downloaded it."""
-    datafile = os.path.join(outpath, 'cats.npy')
+    datafile = os.path.join(outpath, 'cats-{}.npy'.format(patch_size))
     if not os.path.exists(datafile):
         # then we'll have to load in cats and make them the same size
         # the cat .jpg are stored in a few folders so we'll look recursively
@@ -53,9 +53,11 @@ def cats(cats_path, outpath):
         logging.info('no preprocessed cats, processing now')
 
         with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+            processor = partial(
+                process_cat, final_shape=(patch_size, patch_size))
             ims = np.stack(
                 chain.from_iterable(
-                    pool.imap(process_cat, _count_loader(fnames), 100)))
+                    pool.imap(processor, _count_loader(fnames), 100)))
         np.save(datafile, ims)
     else:
         logging.info('found preprocessed cats')
@@ -122,7 +124,7 @@ def get_frames(device, size_factor):
     while rval:
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # make it smaller for now
-        frame = cv2.resize(frame, (0, 0), fx=0.75, fy=0.75)
+        # frame = cv2.resize(frame, (0, 0), fx=0.75, fy=0.75)
         x_start, x_end = _slice_params(frame.shape[0], size_factor)
         y_start, y_end = _slice_params(frame.shape[1], size_factor)
         frame = frame[x_start:x_end, y_start:y_end, :]
@@ -172,13 +174,17 @@ def make_mosaic(index, img, patch_size, data):
     help='dataset to use',
     type=click.Choice(['cifar100', 'imagenet', 'celeba', 'cats']))
 @click.option('--cats_path', help='path to downloaded cats data')
-def run(imdir, cores, dataset, cats_path):
+@click.option('--device', help='video device to use', default=0)
+@click.option(
+    '--patch_size', help='size of patches to replace', default=32, type=int)
+def run(imdir, cores, dataset, cats_path, device, patch_size):
     """run the thing end to end"""
     logging.basicConfig(level=logging.INFO)
 
     if imdir is None:
         imdir = os.path.join(
-            os.path.dirname(__file__), 'img', dataset + '-index.bin')
+            os.path.dirname(__file__), 'img',
+            dataset + '-{}-index.bin'.format(patch_size))
 
     creation_params = {
         'M': 50,
@@ -188,16 +194,20 @@ def run(imdir, cores, dataset, cats_path):
         'skip_optimized_index':
         1  # can't get the data out of python bindings anyway...
     }
-    query_params = {'efSearch': 200}
+    query_params = {'efSearch': 100}
 
     if dataset == 'cifar100':
         loader = cifar100
     elif dataset == 'imagenet':
         loader = small32_imagenet
     elif dataset == 'cats':
-        loader = partial(cats, cats_path)
+        loader = partial(cats, cats_path, patch_size)
     else:
         loader = celeba
+
+    if patch_size != 32 and dataset != 'cats':
+        raise ValueError(
+            'only cats dataset supports patch sizes that are not 32')
 
     with img_index(
             imdir,
@@ -205,15 +215,15 @@ def run(imdir, cores, dataset, cats_path):
             construction_args=creation_params,
             query_args=query_params) as stuff:
         index, data = stuff
-        cv2.namedWindow('raw')
-        for frame in get_frames(0, 64):
-            img = make_mosaic(index, frame, 64, data)
+        cv2.namedWindow('patchies')
+        for frame in get_frames(device, patch_size):
+            img = make_mosaic(index, frame, patch_size, data)
 
             big_im = np.concatenate(
                 (img, np.zeros((img.shape[0], 1, 3), dtype=np.uint8), frame),
                 axis=1)
 
-            cv2.imshow('raw', cv2.cvtColor(big_im, cv2.COLOR_RGB2BGR))
+            cv2.imshow('patchies', cv2.cvtColor(big_im, cv2.COLOR_RGB2BGR))
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

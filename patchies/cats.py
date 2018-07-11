@@ -17,7 +17,7 @@ def _read_annotation(path):
     # first should be the number of points, we'll just ignore it
     # the others are pairs
     nums = np.asarray([int(dim) for dim in annotation[1:]])
-    return nums.reshape((-1, 2))
+    return nums.reshape((-1, 2))[:, ::-1]
 
 
 def load_cat_and_face_bbox(cat_path):
@@ -69,7 +69,7 @@ def crop_to_square_bbox(img, bbox):
     if np.any(bbox[1, :] >= img_bbox[1, :]):
         bbox -= np.clip(bbox[1, :] - img_bbox[1, :], 0, None)
 
-    return img[bbox[0, 1]:bbox[1, 1], bbox[0, 0]:bbox[1, 0], :]
+    return img[bbox[0, 0]:bbox[1, 0], bbox[0, 1]:bbox[1, 1], :]
 
 
 def pad_bbox(bbox, pad):
@@ -89,7 +89,7 @@ def scan(func, initial):
         current = func(current)
 
 
-def process_cat(cat_path, face_pad=0.5, final_shape=(32, 32)):
+def process_cat(cat_path, face_pad=0.25, final_shape=(32, 32)):
     """process a single cat image into a final shape. Involves the following
     steps:
     - load the image
@@ -104,6 +104,5 @@ def process_cat(cat_path, face_pad=0.5, final_shape=(32, 32)):
     img = crop_to_square_bbox(img, bbox)
     img = cv2.resize(img, final_shape)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
     # return all four 90 degree rotations
     return tuple(islice(scan(np.rot90, img), 4))

@@ -4,13 +4,16 @@ Pipeline for actually processing images.
 import logging
 import multiprocessing
 import os
+from functools import partial
+from itertools import chain
 
 import click
 import cv2
 import numpy as np
-import observations
 from skimage.util import view_as_blocks
 
+import observations
+from patchies.cats import process_cat
 from patchies.index import img_index
 
 
@@ -35,6 +38,30 @@ def _count_loader(gen):
         yield item
         print('\rprocessed {}'.format(i), end='', flush=True)
     print()
+
+
+def cats(cats_path, outpath):
+    """Get the kaggle cats dataset. Needs login, so you'll have to
+    have previously downloaded it."""
+    datafile = os.path.join(outpath, 'cats.npy')
+    if not os.path.exists(datafile):
+        # then we'll have to load in cats and make them the same size
+        # the cat .jpg are stored in a few folders so we'll look recursively
+        fnames = (os.path.join(dirpath, fname)
+                  for dirpath, _, fnames in os.walk(cats_path)
+                  for fname in fnames if fname.endswith('.jpg'))
+        logging.info('no preprocessed cats, processing now')
+
+        with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+            ims = np.stack(
+                chain.from_iterable(
+                    pool.imap(process_cat, _count_loader(fnames), 100)))
+        np.save(datafile, ims)
+    else:
+        logging.info('found preprocessed cats')
+        ims = np.load(datafile)
+
+    return ims.reshape((ims.shape[0], -1))
 
 
 def celeba(path):
@@ -138,13 +165,14 @@ def make_mosaic(index, img, patch_size, data):
 
 @click.command()
 @click.option('--imdir', default=None, help='directory to store images')
-@click.option('--cores', default=3, help='number of threads to use', type=int)
+@click.option('--cores', default=8, help='number of threads to use', type=int)
 @click.option(
     '--dataset',
     default='cifar100',
     help='dataset to use',
-    type=click.Choice(['cifar100', 'imagenet', 'celeba']))
-def run(imdir, cores, dataset):
+    type=click.Choice(['cifar100', 'imagenet', 'celeba', 'cats']))
+@click.option('--cats_path', help='path to downloaded cats data')
+def run(imdir, cores, dataset, cats_path):
     """run the thing end to end"""
     logging.basicConfig(level=logging.INFO)
 
@@ -153,19 +181,21 @@ def run(imdir, cores, dataset):
             os.path.dirname(__file__), 'img', dataset + '-index.bin')
 
     creation_params = {
-        'M': 25,
+        'M': 50,
         'indexThreadQty': cores,
-        'efConstruction': 200,
+        'efConstruction': 400,
         'post': 2,
         'skip_optimized_index':
         1  # can't get the data out of python bindings anyway...
     }
-    query_params = {'efSearch': 100}
+    query_params = {'efSearch': 200}
 
     if dataset == 'cifar100':
         loader = cifar100
     elif dataset == 'imagenet':
         loader = small32_imagenet
+    elif dataset == 'cats':
+        loader = partial(cats, cats_path)
     else:
         loader = celeba
 
@@ -176,8 +206,8 @@ def run(imdir, cores, dataset):
             query_args=query_params) as stuff:
         index, data = stuff
         cv2.namedWindow('raw')
-        for frame in get_frames(0, 32):
-            img = make_mosaic(index, frame, 32, data)
+        for frame in get_frames(0, 64):
+            img = make_mosaic(index, frame, 64, data)
 
             big_im = np.concatenate(
                 (img, np.zeros((img.shape[0], 1, 3), dtype=np.uint8), frame),

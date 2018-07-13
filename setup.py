@@ -11,7 +11,7 @@ def read_file(path):
 setup(
     name='patchies',
     version='0.1',
-    py_modules=['patchies'],
+    packages=['patchies'],
     install_requires=read_file('requirements.txt').split('\n'),
     entry_points='''
         [console_scripts]

@@ -264,7 +264,7 @@ def offline(ctx, outfile, filename):
 
 @cli.command()
 @click.pass_context
-@click.option('--device', help='video device to use', default=0)
+@click.option('--device', help='video device to use', default='0')
 def online(ctx, device):
     """Run the thing on a video."""
     logging.basicConfig(level=logging.INFO)

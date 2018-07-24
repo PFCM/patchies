@@ -18,6 +18,13 @@ lookup.
 All of the following assume a working Python 3 installation -- it's tested
 against Python 3.6 currently.
 
+### pypi
+
+```
+pip install patchies
+```
+_Should_ do the trick. If it doesn't, please raise an issue here.
+
 ### From Source
 
 Clone the repo:

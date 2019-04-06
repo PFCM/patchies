@@ -3,4 +3,3 @@ requests
 pybind11
 nmslib
 numpy
-scikit-image

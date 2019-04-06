@@ -3,6 +3,4 @@ requests
 pybind11
 nmslib
 numpy
-click
-opencv-python
 scikit-image

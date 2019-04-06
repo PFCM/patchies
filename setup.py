@@ -13,9 +13,10 @@ setup(
     version='0.1.1',
     packages=['patchies'],
     install_requires=read_file('requirements.txt').split('\n'),
+    extras_require={'cli': read_file('cli-requirements.txt').split('\n')},
     entry_points='''
         [console_scripts]
-        patchies=patchies.pipeline:cli
+        patchies=patchies.cli:cli [cli]
         ''',
     descriptions='Fast Approximate Nearest Neighbour for making silly pictures',
     long_description=read_file('README.md'),

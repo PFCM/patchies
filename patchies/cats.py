@@ -4,8 +4,8 @@ helpers for preprocessing the cats dataset
 
 from itertools import islice
 
-import cv2
 import numpy as np
+from PIL import Image
 
 
 def _read_annotation(path):
@@ -25,7 +25,7 @@ def load_cat_and_face_bbox(cat_path):
     of the face annotations. The bounding box will cover the mouth and eyes
     only, so you will probably want to pad it out."""
     annotation_path = cat_path + '.cat'
-    cat_im = cv2.imread(cat_path, 1)
+    cat_im = Image.open(cat_path)
     face_points = _read_annotation(annotation_path)
 
     bbox = np.asarray([[np.min(face_points[:, 0]),
@@ -69,7 +69,7 @@ def crop_to_square_bbox(img, bbox):
     if np.any(bbox[1, :] >= img_bbox[1, :]):
         bbox -= np.clip(bbox[1, :] - img_bbox[1, :], 0, None)
 
-    return img[bbox[0, 0]:bbox[1, 0], bbox[0, 1]:bbox[1, 1], :]
+    return img.crop((bbox[0, 0], bbox[1, 0], bbox[0, 1], bbox[1, 1]))
 
 
 def pad_bbox(bbox, pad):
@@ -102,7 +102,7 @@ def process_cat(cat_path, face_pad=0.25, final_shape=(32, 32)):
     img, bbox = load_cat_and_face_bbox(cat_path)
     bbox = pad_bbox(bbox, face_pad)
     img = crop_to_square_bbox(img, bbox)
-    img = cv2.resize(img, final_shape)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.resize(final_shape)
+    img = np.array(img)
     # return all four 90 degree rotations
     return tuple(islice(scan(np.rot90, img), 4))

@@ -98,7 +98,8 @@ def view_as_blocks(arr_in, block_shape):
     new_shape = tuple(arr_shape // block_shape) + tuple(block_shape)
     new_strides = tuple(arr_in.strides * block_shape) + arr_in.strides
 
-    arr_out = np.as_strided(arr_in, shape=new_shape, strides=new_strides)
+    arr_out = np.lib.stride_tricks.as_strided(
+        arr_in, shape=new_shape, strides=new_strides)
 
     return arr_out
 

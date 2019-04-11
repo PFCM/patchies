@@ -33,7 +33,7 @@ def load_cat_and_face_bbox(cat_path):
                        [np.max(face_points[:, 0]),
                         np.max(face_points[:, 1])]])
 
-    bbox = np.clip(bbox, 0, cat_im.shape[:2])
+    bbox = np.clip(bbox, 0, cat_im.size[:2])
 
     return cat_im, bbox
 
@@ -58,7 +58,7 @@ def crop_to_square_bbox(img, bbox):
       fits
     """
     max_side = np.max(bbox[1, :] - bbox[0, :])
-    img_bbox = np.array([[0, 0], list(img.shape[:2])])
+    img_bbox = np.array([[0, 0], list(img.size[:2])])
     min_img = np.min(img_bbox[1, :] - img_bbox[0, :])
 
     bbox = square_bbox(bbox, min(max_side, min_img))
